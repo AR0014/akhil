@@ -1,0 +1,50 @@
+pipeline {
+     agent any
+     tools {
+       maven "maven 3.6.3"
+     }
+     stages {
+        stage('mvn compile') {
+           steps {
+              git branch: 'akhil', url: 'https://github.com/AR0014/akhil.git'
+              sh '/usr/share/maven/mvn compile'
+            }
+     }
+        stage('codereview') {
+          steps {
+              sh '/usr/share/maven/mvn -P metrics pmd:pmd'
+          }
+          post {
+              success {
+                  recordIssues sourceCodeRetention: 'LAST_BUILD', tools: [pmdParser(pattern: '**/pmd.xml')]
+               }
+          }
+     }
+        stage('test') {
+          steps {
+             sh '/usr/share/maven/mvn test'
+          }
+          post {
+               success {
+                   junit 'target/surefire-reports/*.xml'
+               }
+           }
+     }
+        stage('verify') {
+           steps {
+             sh '/usr/share/maven/mvn verify'
+           }
+           post {
+                success {
+                    jacoco()
+                }
+           }
+     }
+        stage('package') {
+          steps {
+            sh '/usr/share/maven/mvn package'
+          }
+     }
+  }
+}
+
